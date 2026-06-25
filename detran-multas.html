@@ -1,0 +1,1557 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Monitor de Multas — DETRAN-MG</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+  :root {
+    --bg: #0f1117;
+    --surface: #181c27;
+    --surface2: #1e2333;
+    --border: #2a3048;
+    --border-light: #353d58;
+    --text: #e8eaf0;
+    --text-muted: #7a8199;
+    --text-dim: #4a5270;
+    --accent: #3b82f6;
+    --accent-dim: #1e3a5f;
+    --green: #22c55e;
+    --green-dim: #14532d;
+    --red: #ef4444;
+    --red-dim: #4c1d1d;
+    --yellow: #f59e0b;
+    --yellow-dim: #451a00;
+    --mono: 'JetBrains Mono', monospace;
+    --sans: 'Inter', sans-serif;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  /* ── Layout ── */
+  .shell {
+    display: grid;
+    grid-template-columns: 240px 1fr;
+    min-height: 100vh;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+
+  .sidebar-logo {
+    padding: 20px 20px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-logo .logo-mark {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .logo-icon {
+    width: 32px;
+    height: 32px;
+    background: var(--accent);
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+
+  .logo-text {
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--text);
+    line-height: 1.2;
+  }
+
+  .logo-sub {
+    font-size: 10px;
+    color: var(--text-muted);
+    font-weight: 400;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .sidebar-nav {
+    flex: 1;
+    padding: 12px 0;
+  }
+
+  .nav-section {
+    padding: 8px 16px 4px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 20px;
+    cursor: pointer;
+    color: var(--text-muted);
+    transition: all 0.15s;
+    font-size: 13px;
+    font-weight: 500;
+    border-left: 2px solid transparent;
+    margin: 1px 0;
+  }
+
+  .nav-item:hover { background: var(--surface2); color: var(--text); }
+  .nav-item.active {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border-left-color: var(--accent);
+  }
+
+  .nav-item .icon { font-size: 15px; width: 18px; text-align: center; }
+
+  .nav-badge {
+    margin-left: auto;
+    background: var(--red);
+    color: #fff;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 6px;
+    border-radius: 10px;
+    min-width: 18px;
+    text-align: center;
+  }
+
+  .sidebar-footer {
+    padding: 16px 20px;
+    border-top: 1px solid var(--border);
+  }
+
+  .api-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+    color: var(--text-muted);
+  }
+
+  .status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--text-dim);
+    flex-shrink: 0;
+  }
+
+  .status-dot.ok { background: var(--green); box-shadow: 0 0 6px var(--green); }
+  .status-dot.err { background: var(--red); }
+
+  /* ── Main ── */
+  .main {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  .topbar {
+    padding: 16px 28px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+
+  .page-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .topbar-actions { display: flex; gap: 8px; align-items: center; }
+
+  /* ── Buttons ── */
+  .btn {
+    padding: 7px 14px;
+    border-radius: 7px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+    font-family: var(--sans);
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+  .btn-primary:hover { background: #2563eb; }
+  .btn-primary:disabled { background: var(--border); color: var(--text-dim); cursor: not-allowed; }
+
+  .btn-ghost {
+    background: transparent;
+    color: var(--text-muted);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { background: var(--surface2); color: var(--text); border-color: var(--border-light); }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--red);
+    border: 1px solid var(--red-dim);
+  }
+  .btn-danger:hover { background: var(--red-dim); }
+
+  .btn-sm { padding: 4px 10px; font-size: 12px; }
+
+  /* ── Content ── */
+  .content {
+    padding: 28px;
+    flex: 1;
+  }
+
+  /* ── Panels (views) ── */
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ── Cards ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+
+  .card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+
+  .card-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  /* ── Stats row ── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 18px;
+  }
+
+  .stat-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .stat-value {
+    font-size: 26px;
+    font-weight: 700;
+    font-family: var(--mono);
+    color: var(--text);
+    line-height: 1;
+  }
+
+  .stat-value.danger { color: var(--red); }
+  .stat-value.ok { color: var(--green); }
+  .stat-value.warn { color: var(--yellow); }
+
+  .stat-sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    margin-top: 4px;
+  }
+
+  /* ── Veículos grid ── */
+  .veiculos-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+  }
+
+  .veiculo-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    transition: border-color 0.15s;
+  }
+
+  .veiculo-card:hover { border-color: var(--border-light); }
+
+  .veiculo-card.com-multa { border-color: var(--red); }
+  .veiculo-card.sem-multa { border-color: var(--green-dim); }
+  .veiculo-card.pendente { border-color: var(--yellow-dim); }
+
+  .veiculo-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 10px;
+  }
+
+  .placa {
+    font-family: var(--mono);
+    font-size: 17px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--text);
+    background: var(--surface2);
+    padding: 4px 10px;
+    border-radius: 5px;
+    border: 1px solid var(--border);
+  }
+
+  .veiculo-status {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 20px;
+  }
+
+  .veiculo-status.ok { background: var(--green-dim); color: var(--green); }
+  .veiculo-status.multa { background: var(--red-dim); color: var(--red); }
+  .veiculo-status.pendente { background: var(--yellow-dim); color: var(--yellow); }
+  .veiculo-status.aguardando { background: var(--surface2); color: var(--text-muted); }
+
+  .veiculo-info {
+    font-size: 12px;
+    color: var(--text-muted);
+    margin-bottom: 12px;
+  }
+
+  .veiculo-info span { display: block; }
+
+  .veiculo-actions { display: flex; gap: 6px; }
+
+  .multas-lista {
+    margin-top: 10px;
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+  }
+
+  .multa-item {
+    background: var(--red-dim);
+    border: 1px solid #5a1f1f;
+    border-radius: 6px;
+    padding: 8px 10px;
+    margin-bottom: 6px;
+    font-size: 12px;
+  }
+
+  .multa-desc {
+    color: var(--text);
+    font-weight: 500;
+    margin-bottom: 3px;
+  }
+
+  .multa-meta {
+    color: var(--text-muted);
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .multa-valor {
+    color: var(--red);
+    font-family: var(--mono);
+    font-weight: 700;
+  }
+
+  /* ── Formulário ── */
+  .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .form-group.full { grid-column: 1 / -1; }
+
+  label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  input, select, textarea {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 7px;
+    padding: 9px 12px;
+    color: var(--text);
+    font-size: 13px;
+    font-family: var(--sans);
+    outline: none;
+    transition: border-color 0.15s;
+    width: 100%;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--accent);
+  }
+
+  input::placeholder { color: var(--text-dim); }
+
+  input[type="password"] { font-family: var(--mono); letter-spacing: 0.1em; }
+
+  /* ── Configuração API ── */
+  .config-box {
+    background: var(--accent-dim);
+    border: 1px solid #1e3f6a;
+    border-radius: 10px;
+    padding: 18px 20px;
+    margin-bottom: 20px;
+  }
+
+  .config-box-title {
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--accent);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  /* ── Histórico / Log ── */
+  .log-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+  }
+
+  .log-table th {
+    text-align: left;
+    padding: 8px 12px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .log-table td {
+    padding: 9px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-muted);
+    vertical-align: middle;
+  }
+
+  .log-table tr:last-child td { border-bottom: none; }
+  .log-table tr:hover td { background: var(--surface2); }
+
+  .tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+  }
+
+  .tag.ok { background: var(--green-dim); color: var(--green); }
+  .tag.err { background: var(--red-dim); color: var(--red); }
+  .tag.warn { background: var(--yellow-dim); color: var(--yellow); }
+
+  /* ── Toast ── */
+  .toast-container {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    z-index: 999;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .toast {
+    background: var(--surface2);
+    border: 1px solid var(--border-light);
+    border-radius: 8px;
+    padding: 12px 16px;
+    font-size: 13px;
+    color: var(--text);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.4);
+    animation: slideIn 0.2s ease;
+    min-width: 260px;
+    max-width: 340px;
+  }
+
+  .toast.ok { border-left: 3px solid var(--green); }
+  .toast.err { border-left: 3px solid var(--red); }
+  .toast.info { border-left: 3px solid var(--accent); }
+
+  @keyframes slideIn {
+    from { transform: translateX(20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  /* ── Modal ── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    display: none;
+  }
+
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border-light);
+    border-radius: 12px;
+    padding: 24px;
+    width: 100%;
+    max-width: 500px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+  }
+
+  .modal-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    color: var(--text);
+  }
+
+  .modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--border);
+  }
+
+  /* ── Progresso consulta ── */
+  .progress-bar {
+    background: var(--surface2);
+    border-radius: 4px;
+    height: 6px;
+    overflow: hidden;
+    margin: 12px 0;
+  }
+
+  .progress-fill {
+    background: var(--accent);
+    height: 100%;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+  }
+
+  .progress-label {
+    font-size: 12px;
+    color: var(--text-muted);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  /* ── Empty state ── */
+  .empty {
+    text-align: center;
+    padding: 48px 20px;
+    color: var(--text-dim);
+  }
+
+  .empty-icon { font-size: 40px; margin-bottom: 12px; }
+  .empty-title { font-size: 15px; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+  .empty-sub { font-size: 13px; }
+
+  /* ── Separador ── */
+  .section-title {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    margin-top: 24px;
+  }
+
+  .section-title:first-child { margin-top: 0; }
+
+  /* ── Spinner ── */
+  .spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--border-light);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Scroll ── */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* ── Aviso cpf/senha ── */
+  .aviso {
+    background: #1c1a00;
+    border: 1px solid #4a3800;
+    border-radius: 8px;
+    padding: 12px 14px;
+    font-size: 12px;
+    color: var(--yellow);
+    margin-top: 12px;
+    line-height: 1.6;
+  }
+
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 20px 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">
+        <div class="logo-icon">🚗</div>
+        <div>
+          <div class="logo-text">Monitor Multas</div>
+          <div class="logo-sub">DETRAN-MG</div>
+        </div>
+      </div>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">Painel</div>
+      <div class="nav-item active" onclick="showView('dashboard')">
+        <span class="icon">📊</span> Dashboard
+      </div>
+      <div class="nav-item" onclick="showView('veiculos')">
+        <span class="icon">🚘</span> Veículos
+        <span class="nav-badge" id="badge-veiculos" style="display:none">0</span>
+      </div>
+
+      <div class="nav-section" style="margin-top:8px">Consultas</div>
+      <div class="nav-item" onclick="showView('consultar')">
+        <span class="icon">🔍</span> Consultar agora
+      </div>
+      <div class="nav-item" onclick="showView('historico')">
+        <span class="icon">📋</span> Histórico
+      </div>
+
+      <div class="nav-section" style="margin-top:8px">Sistema</div>
+      <div class="nav-item" onclick="showView('config')">
+        <span class="icon">⚙️</span> Configurações
+      </div>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="api-status">
+        <div class="status-dot" id="status-dot"></div>
+        <span id="status-label">API não configurada</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="topbar">
+      <span class="page-title" id="page-title">Dashboard</span>
+      <div class="topbar-actions">
+        <span id="last-run-label" style="font-size:11px;color:var(--text-dim)"></span>
+        <button class="btn btn-primary" id="btn-run-all" onclick="consultarTodos()">
+          🔄 Consultar todos
+        </button>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- ── DASHBOARD ── -->
+      <div class="view active" id="view-dashboard">
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-label">Veículos</div>
+            <div class="stat-value" id="stat-total">0</div>
+            <div class="stat-sub">cadastrados</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Com multa</div>
+            <div class="stat-value danger" id="stat-multas">0</div>
+            <div class="stat-sub">veículos</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Regularizados</div>
+            <div class="stat-value ok" id="stat-ok">0</div>
+            <div class="stat-sub">sem pendências</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Valor total</div>
+            <div class="stat-value warn" id="stat-valor">R$ 0</div>
+            <div class="stat-sub">em multas</div>
+          </div>
+        </div>
+
+        <div id="dashboard-multas-section" style="display:none">
+          <div class="section-title">⚠️ Veículos com multas</div>
+          <div id="dashboard-multas-list" class="veiculos-grid"></div>
+        </div>
+
+        <div class="section-title">Todos os veículos</div>
+        <div id="dashboard-veiculos" class="veiculos-grid">
+          <div class="empty">
+            <div class="empty-icon">🚗</div>
+            <div class="empty-title">Nenhum veículo cadastrado</div>
+            <div class="empty-sub">Vá em <strong>Veículos</strong> para adicionar.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── VEÍCULOS ── -->
+      <div class="view" id="view-veiculos">
+        <div style="display:flex;justify-content:flex-end;margin-bottom:16px">
+          <button class="btn btn-primary" onclick="abrirModalVeiculo()">+ Adicionar veículo</button>
+        </div>
+        <div id="veiculos-lista" class="veiculos-grid">
+          <div class="empty">
+            <div class="empty-icon">🚗</div>
+            <div class="empty-title">Nenhum veículo cadastrado</div>
+            <div class="empty-sub">Clique em "Adicionar veículo" para começar.</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CONSULTAR ── -->
+      <div class="view" id="view-consultar">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Consulta em lote — DETRAN-MG via Infosimples</span>
+          </div>
+
+          <p style="font-size:13px;color:var(--text-muted);margin-bottom:16px">
+            Consulta todos os veículos cadastrados usando a API da Infosimples. Cada consulta consome 1 crédito por veículo.
+          </p>
+
+          <div id="consulta-progress" style="display:none">
+            <div class="progress-label">
+              <span id="progress-texto">Consultando...</span>
+              <span id="progress-num">0 / 0</span>
+            </div>
+            <div class="progress-bar">
+              <div class="progress-fill" id="progress-fill" style="width:0%"></div>
+            </div>
+            <div id="progress-log" style="font-size:11px;color:var(--text-dim);margin-top:8px;max-height:120px;overflow-y:auto;font-family:var(--mono)"></div>
+          </div>
+
+          <div style="display:flex;gap:8px;margin-top:8px">
+            <button class="btn btn-primary" id="btn-consultar-lote" onclick="consultarTodos()">
+              🔄 Iniciar consulta de todos
+            </button>
+            <button class="btn btn-ghost" onclick="showView('veiculos')">Gerenciar veículos</button>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:16px">
+          <div class="card-title" style="margin-bottom:14px">Consulta individual</div>
+          <div style="display:flex;gap:8px;align-items:flex-end">
+            <div class="form-group" style="flex:1">
+              <label>Selecione o veículo</label>
+              <select id="select-veiculo-individual">
+                <option value="">Escolha um veículo...</option>
+              </select>
+            </div>
+            <button class="btn btn-primary" onclick="consultarIndividual()">Consultar</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── HISTÓRICO ── -->
+      <div class="view" id="view-historico">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Histórico de consultas</span>
+            <button class="btn btn-ghost btn-sm" onclick="limparHistorico()">Limpar</button>
+          </div>
+          <div id="historico-content">
+            <div class="empty">
+              <div class="empty-icon">📋</div>
+              <div class="empty-title">Nenhuma consulta realizada</div>
+              <div class="empty-sub">Execute uma consulta para ver o histórico.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── CONFIGURAÇÕES ── -->
+      <div class="view" id="view-config">
+        <div class="config-box">
+          <div class="config-box-title">🔑 API Infosimples</div>
+          <div class="form-grid">
+            <div class="form-group full">
+              <label>Token da API (Infosimples)</label>
+              <input type="password" id="cfg-token" placeholder="Seu token da Infosimples..." />
+            </div>
+          </div>
+          <div class="aviso">
+            ⚠️ O token fica salvo apenas no seu navegador (localStorage). Nunca é enviado para outro lugar além da API da Infosimples. Crie sua conta em <strong>api.infosimples.com</strong>.
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title" style="margin-bottom:14px">Credenciais gov.br (para o DETRAN-MG)</div>
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">
+            O DETRAN-MG exige login gov.br para consultar. Você pode definir credenciais globais ou por veículo. As credenciais ficam salvas só no seu navegador.
+          </p>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>CPF gov.br (padrão)</label>
+              <input type="text" id="cfg-cpf" placeholder="000.000.000-00" maxlength="14" />
+            </div>
+            <div class="form-group">
+              <label>Senha gov.br (padrão)</label>
+              <input type="password" id="cfg-senha" placeholder="Senha do gov.br" />
+            </div>
+          </div>
+          <div class="aviso">
+            ⚠️ A senha gov.br é transmitida diretamente para a Infosimples (que a usa para acessar o DETRAN-MG). Leia os termos de uso da Infosimples antes de usar.
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title" style="margin-bottom:14px">Agendamento mensal</div>
+          <p style="font-size:12px;color:var(--text-muted);margin-bottom:14px">
+            O sistema não pode executar consultas em segundo plano automaticamente (limitação de apps web). A alternativa é deixar a aba aberta no dia agendado, ou usar a consulta manual mensalmente.
+          </p>
+          <div class="form-grid">
+            <div class="form-group">
+              <label>Dia do mês para consulta</label>
+              <input type="number" id="cfg-dia" min="1" max="28" placeholder="Ex: 5" />
+            </div>
+          </div>
+          <div id="agendamento-status" style="font-size:12px;color:var(--text-dim);margin-top:8px"></div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:4px">
+          <button class="btn btn-primary" onclick="salvarConfig()">💾 Salvar configurações</button>
+          <button class="btn btn-ghost" onclick="testarAPI()">🔌 Testar conexão</button>
+        </div>
+      </div>
+
+    </div><!-- /content -->
+  </div><!-- /main -->
+</div>
+
+<!-- ── Modal: Adicionar/Editar Veículo ── -->
+<div class="modal-overlay" id="modal-veiculo">
+  <div class="modal">
+    <div class="modal-title" id="modal-veiculo-title">Adicionar veículo</div>
+    <div class="form-grid">
+      <div class="form-group">
+        <label>Placa *</label>
+        <input type="text" id="v-placa" placeholder="ABC1D23" maxlength="8" style="font-family:var(--mono);font-weight:700;letter-spacing:0.1em;text-transform:uppercase" />
+      </div>
+      <div class="form-group">
+        <label>RENAVAM *</label>
+        <input type="text" id="v-renavam" placeholder="00000000000" maxlength="11" style="font-family:var(--mono)" />
+      </div>
+      <div class="form-group">
+        <label>Chassi *</label>
+        <input type="text" id="v-chassi" placeholder="9BW..." maxlength="17" style="font-family:var(--mono);text-transform:uppercase" />
+      </div>
+      <div class="form-group">
+        <label>Descrição</label>
+        <input type="text" id="v-desc" placeholder="Ex: Drone P1 / Caminhonete" />
+      </div>
+      <div class="form-group full">
+        <label>CPF gov.br (deixe vazio para usar o padrão)</label>
+        <input type="text" id="v-cpf" placeholder="CPF específico deste veículo" maxlength="14" />
+      </div>
+      <div class="form-group full">
+        <label>Senha gov.br (deixe vazio para usar o padrão)</label>
+        <input type="password" id="v-senha" placeholder="Senha específica deste veículo" />
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-veiculo')">Cancelar</button>
+      <button class="btn btn-primary" onclick="salvarVeiculo()">Salvar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Modal: Detalhe de multas ── -->
+<div class="modal-overlay" id="modal-multas">
+  <div class="modal" style="max-width:620px">
+    <div class="modal-title" id="modal-multas-title">Multas do veículo</div>
+    <div id="modal-multas-content"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" onclick="fecharModal('modal-multas')">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-container" id="toast-container"></div>
+
+<script>
+// ══════════════════════════════════════════
+//  Estado global
+// ══════════════════════════════════════════
+let veiculos = [];
+let historico = [];
+let config = {};
+let editandoIdx = -1;
+
+// ══════════════════════════════════════════
+//  Init
+// ══════════════════════════════════════════
+function init() {
+  veiculos = JSON.parse(localStorage.getItem('mm_veiculos') || '[]');
+  historico = JSON.parse(localStorage.getItem('mm_historico') || '[]');
+  config = JSON.parse(localStorage.getItem('mm_config') || '{}');
+  aplicarConfig();
+  renderDashboard();
+  renderVeiculosList();
+  renderHistorico();
+  atualizarStatusAPI();
+  verificarAgendamento();
+}
+
+function salvarDados() {
+  localStorage.setItem('mm_veiculos', JSON.stringify(veiculos));
+  localStorage.setItem('mm_historico', JSON.stringify(historico));
+  localStorage.setItem('mm_config', JSON.stringify(config));
+}
+
+// ══════════════════════════════════════════
+//  Navegação
+// ══════════════════════════════════════════
+const pageTitles = {
+  dashboard: 'Dashboard',
+  veiculos: 'Veículos',
+  consultar: 'Consultar',
+  historico: 'Histórico',
+  config: 'Configurações'
+};
+
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('view-' + id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.getAttribute('onclick') && n.getAttribute('onclick').includes("'" + id + "'")) {
+      n.classList.add('active');
+    }
+  });
+  document.getElementById('page-title').textContent = pageTitles[id] || id;
+
+  if (id === 'consultar') renderSelectIndividual();
+  if (id === 'veiculos') renderVeiculosList();
+  if (id === 'historico') renderHistorico();
+}
+
+// ══════════════════════════════════════════
+//  Config
+// ══════════════════════════════════════════
+function aplicarConfig() {
+  if (config.token) document.getElementById('cfg-token').value = config.token;
+  if (config.cpf) document.getElementById('cfg-cpf').value = config.cpf;
+  if (config.senha) document.getElementById('cfg-senha').value = config.senha;
+  if (config.dia) document.getElementById('cfg-dia').value = config.dia;
+}
+
+function salvarConfig() {
+  config.token = document.getElementById('cfg-token').value.trim();
+  config.cpf = document.getElementById('cfg-cpf').value.trim();
+  config.senha = document.getElementById('cfg-senha').value;
+  config.dia = document.getElementById('cfg-dia').value;
+  salvarDados();
+  atualizarStatusAPI();
+  toast('Configurações salvas.', 'ok');
+}
+
+async function testarAPI() {
+  const token = config.token || document.getElementById('cfg-token').value.trim();
+  if (!token) { toast('Informe o token da API primeiro.', 'err'); return; }
+  toast('Testando conexão...', 'info');
+  try {
+    const r = await fetch(`https://api.infosimples.com/api/v2/consultas/detran/mg/multas-descritivos?token=${token}&placa=TEST0001&chassi=TEST&login_cpf=00000000000&login_senha=teste`, { method: 'GET' });
+    const d = await r.json();
+    // Infosimples retorna 200 mesmo em erro de dados, mas 401 se token inválido
+    if (r.status === 401 || (d && d.code === 401)) {
+      toast('Token inválido.', 'err');
+    } else {
+      toast('Conexão com a API OK.', 'ok');
+    }
+  } catch(e) {
+    toast('Erro de rede: ' + e.message, 'err');
+  }
+}
+
+function atualizarStatusAPI() {
+  const dot = document.getElementById('status-dot');
+  const label = document.getElementById('status-label');
+  if (config.token) {
+    dot.className = 'status-dot ok';
+    label.textContent = 'API configurada';
+  } else {
+    dot.className = 'status-dot err';
+    label.textContent = 'API não configurada';
+  }
+}
+
+// ══════════════════════════════════════════
+//  Veículos — CRUD
+// ══════════════════════════════════════════
+function abrirModalVeiculo(idx = -1) {
+  editandoIdx = idx;
+  const title = document.getElementById('modal-veiculo-title');
+  if (idx >= 0) {
+    const v = veiculos[idx];
+    title.textContent = 'Editar veículo';
+    document.getElementById('v-placa').value = v.placa;
+    document.getElementById('v-renavam').value = v.renavam;
+    document.getElementById('v-chassi').value = v.chassi;
+    document.getElementById('v-desc').value = v.desc || '';
+    document.getElementById('v-cpf').value = v.cpf || '';
+    document.getElementById('v-senha').value = v.senha || '';
+  } else {
+    title.textContent = 'Adicionar veículo';
+    ['v-placa','v-renavam','v-chassi','v-desc','v-cpf','v-senha'].forEach(id => document.getElementById(id).value = '');
+  }
+  document.getElementById('modal-veiculo').classList.add('open');
+}
+
+function fecharModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+function salvarVeiculo() {
+  const placa = document.getElementById('v-placa').value.trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const renavam = document.getElementById('v-renavam').value.trim().replace(/\D/g, '');
+  const chassi = document.getElementById('v-chassi').value.trim().toUpperCase();
+  const desc = document.getElementById('v-desc').value.trim();
+  const cpf = document.getElementById('v-cpf').value.trim();
+  const senha = document.getElementById('v-senha').value;
+
+  if (!placa || !renavam || !chassi) { toast('Placa, RENAVAM e Chassi são obrigatórios.', 'err'); return; }
+
+  const obj = { placa, renavam, chassi, desc, cpf, senha, status: 'aguardando', multas: [], ultimaConsulta: null };
+
+  if (editandoIdx >= 0) {
+    obj.status = veiculos[editandoIdx].status;
+    obj.multas = veiculos[editandoIdx].multas;
+    obj.ultimaConsulta = veiculos[editandoIdx].ultimaConsulta;
+    veiculos[editandoIdx] = obj;
+    toast('Veículo atualizado.', 'ok');
+  } else {
+    // Verifica duplicata
+    if (veiculos.find(v => v.placa === placa)) { toast('Placa já cadastrada.', 'err'); return; }
+    veiculos.push(obj);
+    toast('Veículo adicionado.', 'ok');
+  }
+
+  salvarDados();
+  fecharModal('modal-veiculo');
+  renderVeiculosList();
+  renderDashboard();
+  atualizarBadge();
+}
+
+function removerVeiculo(idx) {
+  if (!confirm(`Remover veículo ${veiculos[idx].placa}?`)) return;
+  veiculos.splice(idx, 1);
+  salvarDados();
+  renderVeiculosList();
+  renderDashboard();
+  atualizarBadge();
+  toast('Veículo removido.', 'ok');
+}
+
+// ══════════════════════════════════════════
+//  Render
+// ══════════════════════════════════════════
+function renderVeiculoCard(v, idx, modo = 'full') {
+  const statusInfo = getStatusInfo(v);
+  const multasCount = (v.multas || []).length;
+  const hasMultas = multasCount > 0;
+
+  let multasHtml = '';
+  if (hasMultas && modo === 'full') {
+    const preview = (v.multas || []).slice(0, 2);
+    multasHtml = `<div class="multas-lista">`;
+    preview.forEach(m => {
+      multasHtml += `<div class="multa-item">
+        <div class="multa-desc">${m.descricao || m.descricao_codigo || 'Infração'}</div>
+        <div class="multa-meta">
+          <span>${m.data || ''}</span>
+          <span>${m.local ? m.local.substring(0,40) : ''}</span>
+          ${m.valor || m.normalizado_valor ? `<span class="multa-valor">R$ ${m.valor || m.normalizado_valor}</span>` : ''}
+        </div>
+      </div>`;
+    });
+    if (multasCount > 2) {
+      multasHtml += `<div style="font-size:11px;color:var(--text-dim);text-align:center;margin-top:4px">+${multasCount - 2} multa(s) — clique em Detalhar</div>`;
+    }
+    multasHtml += `</div>`;
+  }
+
+  const ultimaStr = v.ultimaConsulta ? `Consulta: ${new Date(v.ultimaConsulta).toLocaleString('pt-BR')}` : 'Nunca consultado';
+
+  return `<div class="veiculo-card ${statusInfo.cardClass}">
+    <div class="veiculo-header">
+      <span class="placa">${v.placa}</span>
+      <span class="veiculo-status ${statusInfo.cls}">${statusInfo.icon} ${statusInfo.label}</span>
+    </div>
+    <div class="veiculo-info">
+      ${v.desc ? `<span style="color:var(--text);font-weight:500">${v.desc}</span>` : ''}
+      <span>RENAVAM: ${v.renavam}</span>
+      <span style="font-size:11px">${ultimaStr}</span>
+    </div>
+    ${multasHtml}
+    <div class="veiculo-actions">
+      <button class="btn btn-ghost btn-sm" onclick="consultarUm(${idx})">🔍 Consultar</button>
+      ${hasMultas ? `<button class="btn btn-ghost btn-sm" onclick="verMultas(${idx})">📋 Detalhar (${multasCount})</button>` : ''}
+      ${modo === 'full' ? `<button class="btn btn-ghost btn-sm" onclick="abrirModalVeiculo(${idx})">✏️</button>
+      <button class="btn btn-danger btn-sm" onclick="removerVeiculo(${idx})">🗑️</button>` : ''}
+    </div>
+  </div>`;
+}
+
+function getStatusInfo(v) {
+  if (!v.ultimaConsulta) return { cardClass: '', cls: 'aguardando', icon: '⏳', label: 'Não consultado' };
+  if (v.status === 'ok') return { cardClass: 'sem-multa', cls: 'ok', icon: '✅', label: 'Sem multas' };
+  if (v.status === 'multa') return { cardClass: 'com-multa', cls: 'multa', icon: '🚨', label: `${(v.multas||[]).length} multa(s)` };
+  if (v.status === 'erro') return { cardClass: 'pendente', cls: 'pendente', icon: '⚠️', label: 'Erro na consulta' };
+  return { cardClass: '', cls: 'aguardando', icon: '⏳', label: 'Aguardando' };
+}
+
+function renderVeiculosList() {
+  const el = document.getElementById('veiculos-lista');
+  if (!veiculos.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">🚗</div><div class="empty-title">Nenhum veículo cadastrado</div><div class="empty-sub">Clique em "Adicionar veículo" para começar.</div></div>`;
+    return;
+  }
+  el.innerHTML = veiculos.map((v, i) => renderVeiculoCard(v, i, 'full')).join('');
+}
+
+function renderDashboard() {
+  const total = veiculos.length;
+  const comMulta = veiculos.filter(v => v.status === 'multa').length;
+  const semMulta = veiculos.filter(v => v.status === 'ok').length;
+  const valorTotal = veiculos.reduce((acc, v) => {
+    (v.multas || []).forEach(m => {
+      const val = parseFloat(m.valor || m.normalizado_valor || 0);
+      if (!isNaN(val)) acc += val;
+    });
+    return acc;
+  }, 0);
+
+  document.getElementById('stat-total').textContent = total;
+  document.getElementById('stat-multas').textContent = comMulta;
+  document.getElementById('stat-ok').textContent = semMulta;
+  document.getElementById('stat-valor').textContent = 'R$ ' + valorTotal.toFixed(2).replace('.', ',');
+
+  const dvEl = document.getElementById('dashboard-veiculos');
+  if (!total) {
+    dvEl.innerHTML = `<div class="empty"><div class="empty-icon">🚗</div><div class="empty-title">Nenhum veículo cadastrado</div><div class="empty-sub">Vá em <strong>Veículos</strong> para adicionar.</div></div>`;
+  } else {
+    dvEl.innerHTML = veiculos.map((v, i) => renderVeiculoCard(v, i, 'compact')).join('');
+  }
+
+  const secMultas = document.getElementById('dashboard-multas-section');
+  const listMultas = document.getElementById('dashboard-multas-list');
+  if (comMulta > 0) {
+    secMultas.style.display = 'block';
+    listMultas.innerHTML = veiculos
+      .map((v, i) => v.status === 'multa' ? renderVeiculoCard(v, i, 'full') : '')
+      .join('');
+  } else {
+    secMultas.style.display = 'none';
+  }
+
+  atualizarBadge();
+}
+
+function atualizarBadge() {
+  const badge = document.getElementById('badge-veiculos');
+  if (veiculos.length > 0) {
+    badge.textContent = veiculos.length;
+    badge.style.display = 'inline-block';
+    badge.style.background = veiculos.some(v => v.status === 'multa') ? 'var(--red)' : 'var(--accent)';
+  } else {
+    badge.style.display = 'none';
+  }
+}
+
+function renderSelectIndividual() {
+  const sel = document.getElementById('select-veiculo-individual');
+  sel.innerHTML = '<option value="">Escolha um veículo...</option>' +
+    veiculos.map((v, i) => `<option value="${i}">${v.placa}${v.desc ? ' — ' + v.desc : ''}</option>`).join('');
+}
+
+function renderHistorico() {
+  const el = document.getElementById('historico-content');
+  if (!historico.length) {
+    el.innerHTML = `<div class="empty"><div class="empty-icon">📋</div><div class="empty-title">Nenhuma consulta realizada</div><div class="empty-sub">Execute uma consulta para ver o histórico.</div></div>`;
+    return;
+  }
+  const rows = [...historico].reverse().slice(0, 100).map(h => {
+    const tagCls = h.resultado === 'ok' ? 'ok' : h.resultado === 'multa' ? 'err' : 'warn';
+    const tagLabel = h.resultado === 'ok' ? 'Sem multas' : h.resultado === 'multa' ? `${h.qtdMultas} multa(s)` : 'Erro';
+    return `<tr>
+      <td style="font-family:var(--mono)">${h.placa}</td>
+      <td>${h.desc || ''}</td>
+      <td>${new Date(h.data).toLocaleString('pt-BR')}</td>
+      <td><span class="tag ${tagCls}">${tagLabel}</span></td>
+      <td style="font-family:var(--mono);color:${h.valorTotal ? 'var(--red)' : 'var(--text-dim)'}">
+        ${h.valorTotal ? 'R$ ' + parseFloat(h.valorTotal).toFixed(2).replace('.',',') : '—'}
+      </td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `<table class="log-table">
+    <thead>
+      <tr><th>Placa</th><th>Descrição</th><th>Data/Hora</th><th>Resultado</th><th>Valor</th></tr>
+    </thead>
+    <tbody>${rows}</tbody>
+  </table>`;
+}
+
+function limparHistorico() {
+  if (!confirm('Limpar todo o histórico?')) return;
+  historico = [];
+  salvarDados();
+  renderHistorico();
+  toast('Histórico limpo.', 'ok');
+}
+
+// ══════════════════════════════════════════
+//  Ver multas detalhe
+// ══════════════════════════════════════════
+function verMultas(idx) {
+  const v = veiculos[idx];
+  document.getElementById('modal-multas-title').textContent = `Multas — ${v.placa}${v.desc ? ' / ' + v.desc : ''}`;
+
+  if (!v.multas || !v.multas.length) {
+    document.getElementById('modal-multas-content').innerHTML = '<p style="color:var(--text-muted)">Nenhuma multa registrada.</p>';
+  } else {
+    document.getElementById('modal-multas-content').innerHTML = v.multas.map(m => `
+      <div class="multa-item" style="margin-bottom:8px">
+        <div class="multa-desc">${m.descricao || m.descricao_codigo || 'Infração'}</div>
+        <div class="multa-meta" style="margin-top:4px">
+          <span>📅 ${m.data || ''}${m.hora ? ' ' + m.hora : ''}</span>
+          ${m.local ? `<span>📍 ${m.local}</span>` : ''}
+          ${m.municipio ? `<span>🏙️ ${m.municipio}</span>` : ''}
+          ${m.orgao ? `<span>🏢 ${m.orgao}</span>` : ''}
+          ${m.situacao ? `<span>Status: ${m.situacao}</span>` : ''}
+          ${m.ait ? `<span style="font-family:var(--mono)">AIT: ${m.ait}</span>` : ''}
+        </div>
+        ${(m.valor || m.normalizado_valor) ? `<div class="multa-valor" style="margin-top:6px;font-size:16px">R$ ${m.valor || m.normalizado_valor}</div>` : ''}
+      </div>
+    `).join('');
+  }
+
+  document.getElementById('modal-multas').classList.add('open');
+}
+
+// ══════════════════════════════════════════
+//  Consulta API Infosimples
+// ══════════════════════════════════════════
+async function consultarVeiculo(v) {
+  const token = config.token;
+  if (!token) throw new Error('Token da API não configurado.');
+
+  const cpf = v.cpf || config.cpf || '';
+  const senha = v.senha || config.senha || '';
+  if (!cpf || !senha) throw new Error('CPF/senha gov.br não configurados.');
+
+  const params = new URLSearchParams({
+    token,
+    placa: v.placa,
+    chassi: v.chassi,
+    renavam: v.renavam,
+    login_cpf: cpf.replace(/\D/g, ''),
+    login_senha: senha
+  });
+
+  const url = `https://api.infosimples.com/api/v2/consultas/detran/mg/multas-descritivos?${params}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`HTTP ${r.status}`);
+  const d = await r.json();
+  return d;
+}
+
+async function processarResposta(v, idx, data) {
+  // Infosimples retorna code 200 para sucesso
+  if (data.code && data.code !== 200) {
+    throw new Error(data.errors ? data.errors.join(', ') : `Erro ${data.code}`);
+  }
+
+  const multas = [];
+  const site = data.data && data.data[0] ? data.data[0] : {};
+
+  // Coleta multas e autuações
+  if (site.multas && Array.isArray(site.multas)) multas.push(...site.multas);
+  if (site.autuacoes && Array.isArray(site.autuacoes)) {
+    site.autuacoes.forEach(a => {
+      if (!multas.find(m => m.ait === a.ait)) multas.push(a);
+    });
+  }
+
+  veiculos[idx].multas = multas;
+  veiculos[idx].ultimaConsulta = new Date().toISOString();
+  veiculos[idx].status = multas.length > 0 ? 'multa' : 'ok';
+  veiculos[idx].dadosCompletos = site;
+
+  const valorTotal = multas.reduce((acc, m) => acc + parseFloat(m.valor || m.normalizado_valor || 0), 0);
+
+  historico.push({
+    placa: v.placa,
+    desc: v.desc,
+    data: new Date().toISOString(),
+    resultado: multas.length > 0 ? 'multa' : 'ok',
+    qtdMultas: multas.length,
+    valorTotal: valorTotal > 0 ? valorTotal.toFixed(2) : null
+  });
+
+  return multas.length;
+}
+
+async function consultarUm(idx) {
+  const v = veiculos[idx];
+  if (!config.token) { toast('Configure o token da API em Configurações.', 'err'); showView('config'); return; }
+
+  toast(`Consultando ${v.placa}...`, 'info');
+  try {
+    const data = await consultarVeiculo(v);
+    const qtd = await processarResposta(v, idx, data);
+    salvarDados();
+    renderVeiculosList();
+    renderDashboard();
+    if (qtd > 0) {
+      toast(`${v.placa}: ${qtd} multa(s) encontrada(s)!`, 'err');
+    } else {
+      toast(`${v.placa}: sem multas. ✅`, 'ok');
+    }
+  } catch(e) {
+    veiculos[idx].status = 'erro';
+    veiculos[idx].ultimaConsulta = new Date().toISOString();
+    historico.push({ placa: v.placa, desc: v.desc, data: new Date().toISOString(), resultado: 'erro', qtdMultas: 0, valorTotal: null });
+    salvarDados();
+    renderVeiculosList();
+    renderDashboard();
+    toast(`Erro em ${v.placa}: ${e.message}`, 'err');
+  }
+}
+
+async function consultarIndividual() {
+  const idx = parseInt(document.getElementById('select-veiculo-individual').value);
+  if (isNaN(idx) || idx < 0) { toast('Selecione um veículo.', 'err'); return; }
+  await consultarUm(idx);
+}
+
+async function consultarTodos() {
+  if (!veiculos.length) { toast('Nenhum veículo cadastrado.', 'err'); return; }
+  if (!config.token) { toast('Configure o token da API em Configurações.', 'err'); showView('config'); return; }
+
+  showView('consultar');
+
+  const prog = document.getElementById('consulta-progress');
+  const fill = document.getElementById('progress-fill');
+  const num = document.getElementById('progress-num');
+  const texto = document.getElementById('progress-texto');
+  const log = document.getElementById('progress-log');
+  const btnAll = document.getElementById('btn-run-all');
+  const btnLote = document.getElementById('btn-consultar-lote');
+
+  prog.style.display = 'block';
+  btnAll.disabled = true;
+  btnLote.disabled = true;
+  log.innerHTML = '';
+
+  let ok = 0, erros = 0, comMulta = 0;
+
+  for (let i = 0; i < veiculos.length; i++) {
+    const v = veiculos[i];
+    num.textContent = `${i + 1} / ${veiculos.length}`;
+    texto.textContent = `Consultando ${v.placa}${v.desc ? ' — ' + v.desc : ''}...`;
+    fill.style.width = `${((i) / veiculos.length) * 100}%`;
+
+    try {
+      const data = await consultarVeiculo(v);
+      const qtd = await processarResposta(v, i, data);
+      if (qtd > 0) {
+        comMulta++;
+        addLog(log, `⚠️ ${v.placa}: ${qtd} multa(s)`);
+      } else {
+        ok++;
+        addLog(log, `✅ ${v.placa}: sem multas`);
+      }
+    } catch(e) {
+      erros++;
+      veiculos[i].status = 'erro';
+      veiculos[i].ultimaConsulta = new Date().toISOString();
+      historico.push({ placa: v.placa, desc: v.desc, data: new Date().toISOString(), resultado: 'erro', qtdMultas: 0, valorTotal: null });
+      addLog(log, `❌ ${v.placa}: ${e.message}`);
+    }
+
+    salvarDados();
+    // Delay para não sobrecarregar a API
+    if (i < veiculos.length - 1) await sleep(1200);
+  }
+
+  fill.style.width = '100%';
+  num.textContent = `${veiculos.length} / ${veiculos.length}`;
+  texto.textContent = `Concluído — ${ok} OK, ${comMulta} com multas, ${erros} erros.`;
+
+  btnAll.disabled = false;
+  btnLote.disabled = false;
+
+  document.getElementById('last-run-label').textContent = `Última execução: ${new Date().toLocaleString('pt-BR')}`;
+  config.ultimaExecucao = new Date().toISOString();
+  salvarDados();
+
+  renderDashboard();
+  renderHistorico();
+
+  if (comMulta > 0) {
+    toast(`Atenção: ${comMulta} veículo(s) com multas!`, 'err');
+  } else {
+    toast(`Consulta concluída. ${ok} veículos sem multas.`, 'ok');
+  }
+}
+
+function addLog(el, msg) {
+  const line = document.createElement('div');
+  line.textContent = `[${new Date().toLocaleTimeString('pt-BR')}] ${msg}`;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+// ══════════════════════════════════════════
+//  Agendamento
+// ══════════════════════════════════════════
+function verificarAgendamento() {
+  if (!config.dia) return;
+  const hoje = new Date().getDate();
+  const diaConfig = parseInt(config.dia);
+
+  const statusEl = document.getElementById('agendamento-status');
+  if (statusEl) {
+    if (hoje === diaConfig) {
+      statusEl.textContent = '📅 Hoje é o dia configurado para consulta mensal.';
+      statusEl.style.color = 'var(--yellow)';
+
+      const ultimaExec = config.ultimaExecucao ? new Date(config.ultimaExecucao) : null;
+      const mesAtual = new Date().getMonth() + '-' + new Date().getFullYear();
+      const mesUltimaExec = ultimaExec ? (ultimaExec.getMonth() + '-' + ultimaExec.getFullYear()) : null;
+
+      if (mesUltimaExec !== mesAtual) {
+        setTimeout(() => {
+          if (confirm(`Hoje é o dia ${diaConfig} — dia configurado para consulta mensal. Executar agora?`)) {
+            consultarTodos();
+          }
+        }, 800);
+      }
+    } else {
+      statusEl.textContent = `Próxima consulta agendada: dia ${diaConfig} do mês.`;
+      statusEl.style.color = 'var(--text-dim)';
+    }
+  }
+}
+
+// ══════════════════════════════════════════
+//  Toast
+// ══════════════════════════════════════════
+function toast(msg, tipo = 'info') {
+  const container = document.getElementById('toast-container');
+  const el = document.createElement('div');
+  el.className = `toast ${tipo}`;
+  el.textContent = msg;
+  container.appendChild(el);
+  setTimeout(() => {
+    el.style.opacity = '0';
+    el.style.transition = 'opacity 0.3s';
+    setTimeout(() => el.remove(), 300);
+  }, 3500);
+}
+
+// ══════════════════════════════════════════
+//  Start
+// ══════════════════════════════════════════
+init();
+</script>
+</body>
+</html>
